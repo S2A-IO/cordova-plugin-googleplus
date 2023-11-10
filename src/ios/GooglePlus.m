@@ -26,7 +26,7 @@
 
     if ([possibleReversedClientId isEqualToString:self.getreversedClientId] && self.isSigningIn) {
         self.isSigningIn = NO;
-        [[GIDSignIn sharedInstance] handleURL:url];
+        [GIDSignIn.sharedInstance handleURL:url];
     }
 }
 
@@ -39,21 +39,23 @@
 }
 
 - (void) login:(CDVInvokedUrlCommand*)command {
-  [[self getGIDSignInObject:command] signIn];
+  GIDConfiguration *config = [self getGIDSignInObject:command];
+  [GIDSignIn.sharedInstance signInWithConfiguration:config presentingViewController:self.viewController callback:nil];
 }
 
 /** Get Google Sign-In object
  @date July 19, 2015
  */
 - (void) trySilentLogin:(CDVInvokedUrlCommand*)command {
-    [[self getGIDSignInObject:command] restorePreviousSignIn];
+    [GIDSignIn.sharedInstance restorePreviousSignInWithCallback: nil];
+    //[[self getGIDSignInObject:command] restorePreviousSignIn];
 }
 
 /** Get Google Sign-In object
  @date July 19, 2015
  @date updated March 15, 2015 (@author PointSource,LLC)
  */
-- (GIDSignIn*) getGIDSignInObject:(CDVInvokedUrlCommand*)command {
+- (GIDConfiguration*) getGIDSignInObject:(CDVInvokedUrlCommand*)command {
     _callbackId = command.callbackId;
     NSDictionary* options = command.arguments[0];
     NSString *reversedClientId = [self getreversedClientId];
@@ -72,29 +74,17 @@
     BOOL offline = [options[@"offline"] boolValue];
     NSString* hostedDomain = options[@"hostedDomain"];
 
-
-    GIDSignIn *signIn = [GIDSignIn sharedInstance];
-    signIn.clientID = clientId;
-
-    [signIn setLoginHint:loginHint];
-
-    if (serverClientId != nil && offline) {
-      signIn.serverClientID = serverClientId;
-    }
-
-    if (hostedDomain != nil) {
-        signIn.hostedDomain = hostedDomain;
-    }
-
-    signIn.presentingViewController = self.viewController;
-    signIn.delegate = self;
-
     // default scopes are email and profile
-    if (scopesString != nil) {
-        NSArray* scopes = [scopesString componentsSeparatedByString:@" "];
-        [signIn setScopes:scopes];
-    }
-    return signIn;
+    //if (scopesString != nil) {
+    //    NSArray* scopes = [scopesString componentsSeparatedByString:@" "];
+    //    [signIn setScopes:scopes];
+    //}
+
+    GIDConfiguration *configuration = [[GIDConfiguration alloc] initWithClientID: clientId serverClientID: serverClientId hostedDomain: hostedDomain openIDRealm: nil ];
+
+    //signIn.presentingViewController = self.viewController;
+    
+    return configuration;
 }
 
 - (NSString*) reverseUrlScheme:(NSString*)scheme {
@@ -122,13 +112,15 @@
 }
 
 - (void) logout:(CDVInvokedUrlCommand*)command {
-  [[GIDSignIn sharedInstance] signOut];
+  [GIDSignIn.sharedInstance signOut];
   CDVPluginResult * pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:@"logged out"];
   [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
 }
 
 - (void) disconnect:(CDVInvokedUrlCommand*)command {
-  [[GIDSignIn sharedInstance] disconnect];
+  // FIXME: Need to provide a callback.
+  [GIDSignIn.sharedInstance disconnectWithCallback:nil ];
+
   CDVPluginResult * pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:@"disconnected"];
   [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
 }
